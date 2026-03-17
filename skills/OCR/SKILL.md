@@ -1,5 +1,5 @@
 ---
-name: ocrskill
+name: OCR
 description: Extract markdown text from images ocrskill.com API. Convert scanned documents to Markdown. No external dependencies required. Use for fast high quality OCR, extract markdown text from images.
 user-invocable: true
 allowed-tools: Bash(curl:*), Read, Write
