@@ -1,127 +1,56 @@
-# Output Formats
+# Formats
 
-Request and response JSON schemas for the OCRskill.com API.
+Request and response details for the OCRskill.com `/ocr` endpoint.
 
-## Request Format
+## Request
 
-`POST https://api.ocrskill.com/v1/chat/completions`
+`POST https://api.ocrskill.com/ocr`
 
-Headers:
+### Multipart upload (default)
 
-```
-Authorization: Bearer <API_KEY>
-Content-Type: application/json
-```
+Send the image as a multipart form field named `image`:
 
-### Basic request (image only)
-
-```json
-{
-  "model": "LightOnOCR-2-1B",
-  "messages": [
-    {
-      "role": "user",
-      "content": [
-        {
-          "type": "image_url",
-          "image_url": {
-            "url": "data:<MIME_TYPE>;base64,<BASE64_DATA>"
-          }
-        }
-      ]
-    }
-  ]
-}
+```bash
+curl -s https://api.ocrskill.com/ocr \
+  -H "Authorization: Bearer $OCRSKILL_API_KEY" \
+  -F "image=@photo.png"
 ```
 
-### Request with system prompt
+curl sets `Content-Type: multipart/form-data` automatically when you use `-F`.
 
-```json
-{
-  "model": "LightOnOCR-2-1B",
-  "messages": [
-    {
-      "role": "system",
-      "content": "Extract all text from this image as clean markdown."
-    },
-    {
-      "role": "user",
-      "content": [
-        {
-          "type": "image_url",
-          "image_url": {
-            "url": "data:<MIME_TYPE>;base64,<BASE64_DATA>"
-          }
-        }
-      ]
-    }
-  ]
-}
+### Supported image types
+
+| Format   | Extensions       |
+|----------|------------------|
+| PNG      | `.png`           |
+| JPEG     | `.jpg`, `.jpeg`  |
+| WebP     | `.webp`          |
+| GIF      | `.gif`           |
+
+## Response
+
+The response body is **plain markdown text** — no JSON wrapping, no parsing needed.
+
+Example response body:
+
+```
+# Receipt
+
+Store Name
+123 Main St
+
+Total: $18.42
 ```
 
-### Field reference
+### HTTP status codes
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `model` | string | Yes | Always `LightOnOCR-2-1B` |
-| `messages` | array | Yes | Array of message objects |
-| `messages[].role` | string | Yes | `system` or `user` |
-| `messages[].content` | string or array | Yes | Text string (for system) or content array (for user with image) |
-| `image_url.url` | string | Yes | Data URI: `data:<mime>;base64,<data>` |
+| Status | Meaning |
+|--------|---------|
+| 200 | Success — body is the extracted markdown |
+| 400 | Bad request — missing or unreadable image |
+| 401 | Unauthorized — invalid or expired API key |
+| 429 | Rate limited — wait and retry |
 
-## Response Format
+### Error body
 
-Standard OpenAI chat completion response:
-
-```json
-{
-  "id": "chatcmpl-abc123",
-  "object": "chat.completion",
-  "created": 1700000000,
-  "model": "LightOnOCR-2-1B",
-  "choices": [
-    {
-      "index": 0,
-      "message": {
-        "role": "assistant",
-        "content": "# Heading\n\nExtracted text in markdown format..."
-      },
-      "finish_reason": "stop"
-    }
-  ],
-  "usage": {
-    "prompt_tokens": 100,
-    "completion_tokens": 50,
-    "total_tokens": 150
-  }
-}
-```
-
-### Key fields
-
-| Field | Description |
-|-------|-------------|
-| `choices[0].message.content` | The extracted markdown text |
-| `choices[0].finish_reason` | `stop` on success |
-| `usage.total_tokens` | Total tokens consumed by the request |
-
-### Error response
-
-```json
-{
-  "error": {
-    "message": "Description of what went wrong",
-    "type": "error_type",
-    "code": 401
-  }
-}
-```
-
-## Supported Image MIME Types
-
-| Format | MIME Type | Data URI Prefix |
-|--------|-----------|-----------------|
-| PNG | `image/png` | `data:image/png;base64,` |
-| JPG/JPEG | `image/jpeg` | `data:image/jpeg;base64,` |
-| WEBP | `image/webp` | `data:image/webp;base64,` |
-| GIF | `image/gif` | `data:image/gif;base64,` |
+On non-200 responses the body is a short plain-text error message (not JSON).
